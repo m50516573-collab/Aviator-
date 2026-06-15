@@ -3,216 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mahar G Call Service</title>
-    <!-- Google Fonts & Icons -->
+    <title>Mahar G Premium Call & Chat</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- PeerJS for WebRTC Video Calling -->
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background: #121b22; color: #e9edef; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-
+        body { background: #121b22; color: #e9edef; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .app-container { width: 100%; max-width: 450px; height: 100vh; background: #0b141a; display: flex; flex-direction: column; position: relative; }
-        
-        /* Header */
         .header { background: #202c33; padding: 15px; text-align: center; border-bottom: 1px solid #2f3b43; }
-        .header h2 { color: #00a884; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
-
-        /* Connection Box */
-        .conn-box { padding: 20px; background: #1f2c34; margin: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; }
-        .id-display { font-size: 14px; background: #2a3942; padding: 10px; border-radius: 8px; text-align: center; border: 1px dashed #00a884; }
-        .id-display strong { color: #00a884; cursor: pointer; }
+        .header h2 { color: #00a884; font-size: 20px; }
         
-        .input-group { display: flex; gap: 8px; }
-        input { flex: 1; padding: 12px; background: #2a3942; border: none; border-radius: 8px; color: #fff; font-size: 14px; outline: none; }
-        input::placeholder { color: #8696a0; }
+        /* Setup Screen */
+        .setup-screen { padding: 20px; display: flex; flex-direction: column; gap: 15px; margin-top: 30px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 12px; color: #8696a0; }
+        input { padding: 12px; background: #2a3942; border: 1px solid #2f3b43; border-radius: 8px; color: #fff; outline: none; }
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; background: #00a884; color: white; }
         
-        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-        .btn-call { background: #128c7e; color: white; width: 100%; }
-        .btn-call:hover { background: #0b695e; }
-
-        /* Status Label */
-        .status { text-align: center; font-size: 13px; color: #8696a0; margin-top: 5px; }
-
-        /* Full Screen Video Container */
-        .video-wrapper { flex: 1; position: relative; background: #000; display: none; overflow: hidden; }
+        /* Main Chat & Video Area */
+        .main-workspace { flex: 1; display: none; flex-direction: column; height: calc(100vh - 60px); }
+        .chat-box { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0b141a; }
+        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 75%; word-wrap: break-word; font-size: 14px; }
+        .msg.sent { background: #005c4b; align-self: flex-end; color: #e9edef; }
+        .msg.rcvd { background: #202c33; align-self: flex-start; color: #e9edef; }
+        .msg img, .msg video { max-width: 100%; border-radius: 5px; margin-top: 5px; }
         
-        /* Remote Video (Full Screen) */
+        /* Input Bar */
+        .input-bar { background: #202c33; padding: 10px; display: flex; align-items: center; gap: 10px; }
+        .input-bar input { flex: 1; border-radius: 20px; padding: 10px 15px; background: #2a3942; border: none; }
+        .icon-btn { background: none; border: none; color: #8696a0; font-size: 20px; cursor: pointer; }
+        .send-btn { background: #00a884; color: white; width: 40px; height: 40px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        /* Video Call UI Overlay */
+        .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 100; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Local Video (Floating Window) */
-        #local-video { width: 110px; height: 160px; object-fit: cover; position: absolute; top: 20px; right: 20px; border-radius: 10px; border: 2px solid #00a884; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; transform: scaleX(-1); }
-
-        /* Call Controls overlay */
-        .controls { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; }
-        .control-btn { width: 55px; height: 55px; border-radius: 50%; border: none; display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer; color: white; transition: 0.2s; }
-        .btn-mute { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(5px); }
-        .btn-end { background: #ea0038; }
-        .btn-end:hover { background: #c2002e; }
+        #local-video { width: 100px; height: 140px; object-fit: cover; position: absolute; top: 20px; right: 20px; border-radius: 8px; border: 2px solid #00a884; transform: scaleX(-1); }
+        .video-controls { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; }
+        .c-btn { width: 50px; height: 50px; border-radius: 50%; border: none; color: white; font-size: 18px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
+        .btn-hangup { background: #ea0038; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <!-- Header -->
         <div class="header">
-            <h2><i class="fa-solid fa-shield-halved"></i> Mahar G Call</h2>
+            <h2><i class="fa-solid fa-comments"></i> Mahar G Service</h2>
         </div>
 
-        <!-- Setup Screen -->
-        <div id="setup-screen">
-            <div class="conn-box">
-                <div class="id-display">
-                    Apni ID: <strong id="my-id" onclick="copyID()">Loading...</strong>
-                    <div style="font-size: 10px; color: #8696a0; margin-top: 4px;">(Click to copy)</div>
-                </div>
-                
+        <div class="setup-screen" id="login-block">
+            <div class="input-group">
+                <label>Apna Unique Name/Number likhein:</label>
+                <input type="text" id="my-custom-id" placeholder="Example: maharg786">
+            </div>
+            <button onclick="initPeer()" class="btn">App Start Karein</button>
+            <hr style="border-color: #2f3b43; margin: 10px 0;">
+            <div id="call-connect-block" style="display: none; flex-direction: column; gap: 15px;">
                 <div class="input-group">
-                    <input type="text" id="peer-id-input" placeholder="Dost ya Wife ki ID paste karein">
+                    <label>Wife ya Dost ki ID dalein:</label>
+                    <input type="text" id="peer-id-input" placeholder="Dost ki ID likhein">
                 </div>
-                
-                <button onclick="startCall()" class="btn btn-call">
-                    <i class="fa-solid fa-video"></i> Video Call Karein
-                </button>
-                <div class="status" id="status-text">Ready to connect</div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="connectToFriend()" class="btn" style="flex: 1; background: #202c33;"><i class="fa-solid fa-message"></i> Chat Connect</button>
+                    <button onclick="startVideoCall()" class="btn" style="flex: 1;"><i class="fa-solid fa-video"></i> Video Call</button>
+                </div>
             </div>
         </div>
 
-        <!-- Real-time Video Screen -->
-        <div class="video-wrapper" id="video-screen">
+        <div class="main-workspace" id="workspace">
+            <div class="chat-box">
+                <div class="messages" id="msg-box"></div>
+                <div class="input-bar">
+                    <label class="icon-btn">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <input type="file" id="media-file" accept="image/*,video/*,audio/*" style="display:none;" onchange="sendMediaFile()">
+                    </label>
+                    <input type="text" id="text-input" placeholder="Type a message...">
+                    <button onclick="sendTextMessage()" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="video-overlay" id="video-screen">
             <video id="local-video" autoplay muted playsinline></video>
             <video id="remote-video" autoplay playsinline></video>
-            
-            <!-- Controls -->
-            <div class="controls">
-                <button onclick="toggleMute()" class="control-btn btn-mute" id="mute-btn">
-                    <i class="fa-solid fa-microphone"></i>
-                </button>
-                <button onclick="endCall()" class="control-btn btn-end">
-                    <i class="fa-solid fa-phone-slash"></i>
-                </button>
+            <div class="video-controls">
+                <button onclick="flipCamera()" class="c-btn"><i class="fa-solid fa-camera-rotate"></i></button>
+                <button onclick="toggleMic()" class="c-btn" id="mic-btn"><i class="fa-solid fa-microphone"></i></button>
+                <button onclick="endCall()" class="c-btn btn-hangup"><i class="fa-solid fa-phone-slash"></i></button>
             </div>
         </div>
     </div>
 
     <script>
-        // PeerJS initialize (random ID generate hogi)
-        const peer = new Peer();
-        let myId = "";
-        let localStream = null;
+        let peer = null;
+        let conn = null;
         let currentCall = null;
-        let isMuted = false;
+        let localStream = null;
+        let currentFacingMode = "user"; // Front camera default
 
-        // Elements
-        const myIdDisplay = document.getElementById('my-id');
-        const peerIdInput = document.getElementById('peer-id-input');
-        const statusText = document.getElementById('status-text');
-        const setupScreen = document.getElementById('setup-screen');
-        const videoScreen = document.getElementById('video-screen');
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-        const muteBtn = document.getElementById('mute-btn');
-
-        // 1. Peer ID receive hona
-        peer.on('open', (id) => {
-            myId = id;
-            myIdDisplay.innerText = id;
-            statusText.innerText = "Apni ID share karein aur call ka wait karein.";
-        });
-
-        // ID copy karne k liye logic
-        function copyID() {
-            if(myId) {
-                navigator.clipboard.writeText(myId);
-                alert("ID Copy ho gayi hai! Ab WhatsApp par share karein.");
-            }
-        }
-
-        // Camera aur Mic access function
-        async function getMedia(successCallback) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localStream = stream;
-                localVideo.srcObject = stream;
-                successCallback(stream);
-            } catch (err) {
-                alert("Camera ya Mic permission nahi mili!");
-                console.error(err);
-            }
-        }
-
-        // 2. Call Start Karna (Dialer)
-        function startCall() {
-            const remoteId = peerIdInput.value.trim();
-            if (!remoteId) {
-                alert("Please samne wale ki ID enter karein.");
-                return;
-            }
-
-            statusText.innerText = "Calling...";
+        // 1. App Connection Initialize karna custom ID se
+        function initPeer() {
+            const customId = document.getElementById('my-custom-id').value.trim();
+            if(!customId) return alert("Pehle apni koi unique ID ya Number likhein!");
             
-            getMedia((stream) => {
-                setupScreen.style.display = 'none';
-                videoScreen.style.display = 'block';
+            peer = new Peer(customId);
+            
+            peer.on('open', (id) => {
+                alert("Aap ki ID active ho gayi: " + id);
+                document.getElementById('call-connect-block').style.display = 'flex';
+            });
 
-                const call = peer.call(remoteId, stream);
-                handleCallStream(call);
+            peer.on('connection', (connection) => {
+                conn = connection;
+                openChatUI();
+                setupChatReceiver();
+            });
+
+            peer.on('call', (incomingCall) => {
+                if (confirm("Mahar G! Video call aa rahi hai, uthane k liye OK karein.")) {
+                    launchMedia({ video: { facingMode: currentFacingMode }, audio: true }, (stream) => {
+                        document.getElementById('video-screen').style.display = 'block';
+                        incomingCall.answer(stream);
+                        handleStream(incomingCall);
+                    });
+                }
+            });
+
+            peer.on('error', (err) => alert("Error: ID pehle se use me hai ya network issue hai."));
+        }
+
+        // Chat open display
+        function openChatUI() {
+            document.getElementById('login-block').style.display = 'none';
+            document.getElementById('workspace').style.display = 'flex';
+        }
+
+        // 2. Chat k liye target friend se connect hona
+        function connectToFriend() {
+            const peerId = document.getElementById('peer-id-input').value.trim();
+            if(!peerId) return alert("Dost ki ID likhein!");
+            conn = peer.connect(peerId);
+            conn.on('open', () => {
+                openChatUI();
+                setupChatReceiver();
             });
         }
 
-        // 3. Call Receive Karna (Receiver)
-        peer.on('call', (incomingCall) => {
-            if (confirm("Mahar G! Call aa rahi hai. Kya aap accept karna chahte hain?")) {
-                getMedia((stream) => {
-                    setupScreen.style.display = 'none';
-                    videoScreen.style.display = 'block';
+        function setupChatReceiver() {
+            conn.on('data', (data) => {
+                if(data.type === 'text') appendMsg(data.content, 'rcvd');
+                if(data.type === 'media') appendMedia(data.content, data.mediaType, 'rcvd');
+            });
+        }
 
-                    incomingCall.answer(stream); // Call accept aur apna stream send kiya
-                    handleCallStream(incomingCall);
+        // 3. Text Message Bhejna
+        function sendTextMessage() {
+            const input = document.getElementById('text-input');
+            const msg = input.value.trim();
+            if(msg && conn) {
+                conn.send({ type: 'text', content: msg });
+                appendMsg(msg, 'sent');
+                input.value = '';
+            }
+        }
+
+        // 4. Photo/Video/Audio Bhejna
+        function sendMediaFile() {
+            const file = document.getElementById('media-file').files[0];
+            if(!file || !conn) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let mType = file.type.split('/')[0];
+                conn.send({ type: 'media', content: e.target.result, mediaType: mType });
+                appendMedia(e.target.result, mType, 'sent');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function appendMsg(text, type) {
+            document.getElementById('msg-box').innerHTML += `<div class="msg ${type}">${text}</div>`;
+            document.getElementById('msg-box').scrollTop = document.getElementById('msg-box').scrollHeight;
+        }
+
+        function appendMedia(data, type, sender) {
+            let html = '';
+            if(type === 'image') html = `<img src="${data}">`;
+            if(type === 'video') html = `<video src="${data}" controls></video>`;
+            if(type === 'audio') html = `<audio src="${data}" controls></audio>`;
+            document.getElementById('msg-box').innerHTML += `<div class="msg ${sender}">${html}</div>`;
+        }
+
+        // 5. Video Calling & Camera Handle
+        async function launchMedia(constraints, callback) {
+            try {
+                if(localStream) { localStream.getTracks().forEach(t => t.stop()); }
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                localStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+                callback(stream);
+            } catch (e) {
+                alert("Camera/Mic access error!");
+            }
+        }
+
+        function startVideoCall() {
+            const peerId = document.getElementById('peer-id-input').value.trim();
+            if(!peerId) return alert("Pehle samne wale ki ID likhein!");
+            
+            launchMedia({ video: { facingMode: currentFacingMode }, audio: true }, (stream) => {
+                document.getElementById('video-screen').style.display = 'block';
+                const call = peer.call(peerId, stream);
+                handleStream(call);
+            });
+        }
+
+        function handleStream(call) {
+            currentCall = call;
+            call.on('stream', (rStream) => {
+                // Audio track clear out audio issues
+                document.getElementById('remote-video').srcObject = rStream;
+            });
+            call.on('close', () => closeVideoUI());
+        }
+
+        // Camera Replacement / Flip Camera logic
+        function flipCamera() {
+            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+            if(localStream && currentCall) {
+                launchMedia({ video: { facingMode: currentFacingMode }, audio: true }, (newStream) => {
+                    let videoTrack = newStream.getVideoTracks()[0];
+                    let sender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
+                    if(sender) sender.replaceTrack(videoTrack);
                 });
             }
-        });
-
-        // Remote Stream handle karna
-        function handleCallStream(call) {
-            currentCall = call;
-            call.on('stream', (remoteStream) => {
-                remoteVideo.srcObject = remoteStream;
-            });
-
-            call.on('close', () => {
-                resetUI();
-            });
         }
 
-        // 4. Mic Mute/Unmute Logic
-        function toggleMute() {
-            if (localStream) {
-                isMuted = !isMuted;
-                localStream.getAudioTracks()[0].enabled = !isMuted;
-                muteBtn.innerHTML = isMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
-                muteBtn.style.background = isMuted ? '#ea0038' : 'rgba(255, 255, 255, 0.2)';
-            }
+        function toggleMic() {
+            let audioTrack = localStream.getAudioTracks()[0];
+            audioTrack.enabled = !audioTrack.enabled;
+            document.getElementById('mic-btn').innerHTML = audioTrack.enabled ? '<i class="fa-solid fa-microphone"></i>' : '<i class="fa-solid fa-microphone-slash"></i>';
         }
 
-        // 5. Call End Karna
         function endCall() {
-            if (currentCall) currentCall.close();
-            resetUI();
+            if(currentCall) currentCall.close();
+            closeVideoUI();
         }
 
-        function resetUI() {
-            setupScreen.style.display = 'block';
-            videoScreen.style.display = 'none';
-            statusText.innerText = "Call ended.";
-            
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop()); // Camera off karna
-            }
-            if(remoteVideo.srcObject) remoteVideo.srcObject = null;
-            if(localVideo.srcObject) localVideo.srcObject = null;
+        function closeVideoUI() {
+            document.getElementById('video-screen').style.display = 'none';
+            if(localStream) localStream.getTracks().forEach(t => t.stop());
         }
     </script>
 </body>
